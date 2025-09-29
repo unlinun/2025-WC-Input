@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "esnext",
+    "module": "esnext",       // 保持 ES Module
+    "strict": true,           // 開啟嚴格模式
+    "esModuleInterop": true,  // 常見相容性設定
+    "skipLibCheck": true      // 跳過型別檢查，加快編譯
+  },
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Web Component</title>
+  </head>
+  <body>
+    <form style="display: flex; flex-direction: column; gap: 8px; padding: 32px;">
+      <!--  這是我們的自訂表單元件    -->
+      <un-custom-input
+        name="content"
+        value="defaultValue"
+        required
+        max-length="5"
+      >
+      </un-custom-input>
+      <!--  建立一個原生的 Input，看看他的驗證吧！    -->
+      <input type="text" required>
+      <button type="submit">Submit</button>
+    </form>
+
+    <script type="module" src="/src/index.ts"></script>
+    <script>
+      const form = document.querySelector('form');
+      const customInput = document.querySelector('un-custom-input');
+
+      // 在 value change 的同時檢查自訂元件的驗證狀態
+      customInput.addEventListener('value-changed', e => {
+        console.log(customInput.checkValidity(), 'value changed');
+        customInput.reportValidity();
+      });
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        // 當按下 submit 後，要觸發整個表單的驗證
+        form.checkValidity();
+        form.reportValidity(); // 顯示第一個不合法的欄位的錯誤訊息
+      })
+    </script>
+  </body>
+</html>
