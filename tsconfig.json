@@ -5,7 +5,8 @@
     "module": "esnext",       // 保持 ES Module
     "strict": true,           // 開啟嚴格模式
     "esModuleInterop": true,  // 常見相容性設定
-    "skipLibCheck": true      // 跳過型別檢查，加快編譯
+    "skipLibCheck": true,      // 跳過型別檢查，加快編譯
+    "types": ["vitest/globals"] // 讓 TypeScript 也能吃到測試型別設定
   },
   "include": ["src/**/*"]
 }
