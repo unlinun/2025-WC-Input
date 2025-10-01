@@ -163,13 +163,13 @@ export default class CustomInput extends HTMLElement {
   }
 
   // public method: 外部觸發驗證
-  public touchAndValidate(): boolean {
+  public touchAndValidate() {
     this.dirty = true;
-    return this.inputValidator(); // 直接執行內部驗證
+    this.inputValidator(); // 直接執行內部驗證
   }
 
   // public method: 提供外部設定自訂錯誤訊息
-  public setCustomError(msg: string): void {
+  public setCustomError(msg: string) {
     this.internals.setValidity(
       { customError: true },
       msg,
@@ -186,7 +186,7 @@ export default class CustomInput extends HTMLElement {
   }
 
   // public method: 提供外部 reset 欄位值, 錯誤
-  public reset(): void {
+  public reset() {
     if (!this.input) {
       return;
     }

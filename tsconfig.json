@@ -6,7 +6,10 @@
     "strict": true,           // 開啟嚴格模式
     "esModuleInterop": true,  // 常見相容性設定
     "skipLibCheck": true,      // 跳過型別檢查，加快編譯
-    "types": ["vitest/globals"] // 讓 TypeScript 也能吃到測試型別設定
+    "types": ["vitest/globals"], // 讓 TypeScript 也能吃到測試型別設定
+    "declaration": true,         // 產生 .d.ts 型別檔
+    "emitDeclarationOnly": false,// 不只產生型別，也輸出 .js
+    "outDir": "dist",            // 輸出路徑到 dist/
   },
   "include": ["src/**/*"]
 }
