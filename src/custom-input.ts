@@ -1,10 +1,23 @@
+/*
+鐵人賽示範的 Web Component: input（表單元件）
+希望是一個可以提供外部進行大多數表單使用的元件。
+ */
 export default class CustomInput extends HTMLElement {
   // 宣告與表單產生關聯
   static formAssociated = true;
 
-  // 監聽的屬性
+  // 要監聽的屬性
   static get observedAttributes() {
-    return ['value', 'disabled', 'required', 'max-length', 'min-length'];
+    return [
+      'value',
+      'disabled',
+      'required',
+      'max-length',
+      'min-length',
+      'type',
+      'pattern', // 提供自訂的 regex
+      'pattern-message' // 不符合 regex 時的錯誤訊息
+    ];
   }
 
   private readonly internals!: ElementInternals;
@@ -16,6 +29,10 @@ export default class CustomInput extends HTMLElement {
   private allowMulti: boolean = false;
   private maxLength: number = 0;
   private minLength: number = 0;
+  private inputType: 'text' | 'password' = 'text';
+  private customPattern: RegExp | null = null;
+  private patternMessage: string = '格式不符合要求';
+  private dirty = false;
 
   constructor() {
     super();
@@ -32,6 +49,19 @@ export default class CustomInput extends HTMLElement {
     this.defaultValue = this.getAttribute('value') || '';
     this.placeholder = this.getAttribute('placeholder') || '請輸入文字...';
     this.allowMulti = this.getAttribute('multiline') ? !!this.getAttribute('multiline') : false;
+    this.inputType = (this.getAttribute('type') as 'text' | 'password') || 'text';
+    this.patternMessage = this.getAttribute('pattern-message') || '格式不符合要求';
+
+    // 可以接受自定義的 regex
+    const pattern = this.getAttribute('pattern');
+
+    if (pattern) {
+      try {
+        this.customPattern = new RegExp(pattern);
+      } catch (e) {
+        this.customPattern = null;
+      }
+    }
 
     if (!this.input) {
       return;
@@ -64,10 +94,6 @@ export default class CustomInput extends HTMLElement {
     if (name === 'required') {
       // 只要屬性存在就設為 true，不存在就是 false
       this.required = newValue !== null;
-
-      if (newValue !== oldValue) {
-        this.inputValidator(); // 加上時馬上驗證
-      }
     }
 
     // 監聽外部最大長度限制
@@ -75,10 +101,6 @@ export default class CustomInput extends HTMLElement {
       // 試試先轉成數字（要確保填入的是數字）
       const parsed = parseInt(newValue, 10);
       this.maxLength = !isNaN(parsed) && parsed > 0 ? parsed : 0;
-
-      if (newValue !== oldValue) {
-        this.inputValidator(); // 加上時馬上驗證
-      }
     }
 
     // 監聽外部最小長度限制
@@ -86,10 +108,27 @@ export default class CustomInput extends HTMLElement {
       // 試試先轉成數字（要確保填入的是數字）
       const parsed = parseInt(newValue, 10);
       this.minLength = !isNaN(parsed) && parsed > 0 ? parsed : 0;
+    }
 
-      if (newValue !== oldValue) {
-        this.inputValidator(); // 加上時馬上驗證
+    // 監聽 type 變更
+    if (name === 'type') {
+      this.inputType = (newValue as 'text' | 'password') || 'text';
+      this.setPasswordStyle();
+    }
+
+    // 監聽 pattern 變更
+    if (name === 'pattern') {
+      try {
+        this.customPattern = newValue ? new RegExp(newValue) : null;
+      } catch (e) {
+        console.error('Invalid pattern:', e);
+        this.customPattern = null;
       }
+    }
+
+    // 監聽 pattern-message 變更
+    if (name === 'pattern-message') {
+      this.patternMessage = newValue || '格式不符合要求';
     }
   }
 
@@ -108,19 +147,72 @@ export default class CustomInput extends HTMLElement {
     this.internals!.setFormValue(this.value);
   }
 
-  // 對外公開 checkValidity()
+  // 提供外部可以獲取欄位狀態
+  get inputDirty() {
+    return this.dirty;
+  }
+
+  // public method: 驗證欄位是否無誤
   public checkValidity() {
     return this.internals.checkValidity();
   }
 
-  // 對外公開 reportValidity()
+  // public method: 驗證欄位是否無誤，並顯示錯誤訊息
   public reportValidity() {
     return this.internals.reportValidity();
   }
 
-  // 對外公開 errorMessage
+  // public method: 外部觸發驗證
+  public touchAndValidate(): boolean {
+    this.dirty = true;
+    return this.inputValidator(); // 直接執行內部驗證
+  }
+
+  // public method: 提供外部設定自訂錯誤訊息
+  public setCustomError(msg: string): void {
+    this.internals.setValidity(
+      { customError: true },
+      msg,
+      this.input!
+    );
+
+    this.input!.classList.add('error');
+    this.updateErrorDisplay();
+  }
+
+  // public method: 提供外部錯誤訊息
   public getErrorMsg() {
     return this.internals.validationMessage;
+  }
+
+  // public method: 提供外部 reset 欄位值, 錯誤
+  public reset(): void {
+    if (!this.input) {
+      return;
+    }
+
+    // 重置為預設值
+    this.value = this.defaultValue;
+
+    if (this.defaultValue) {
+      this.input.innerText = this.defaultValue;
+      this.internals.setFormValue(this.defaultValue);
+    } else {
+      this.input.innerText = this.placeholder;
+      this.input.classList.add('placeholder');
+      this.internals.setFormValue('');
+    }
+
+    // 清除驗證狀態
+    this.internals.setValidity({});
+    this.input.classList.remove('error');
+    this.updateErrorDisplay();
+
+    // 發送 reset 事件
+    this.dispatchEvent(new CustomEvent('input-reset', {
+      bubbles: true,
+      composed: true
+    }));
   }
 
   private render() {
@@ -128,21 +220,65 @@ export default class CustomInput extends HTMLElement {
     template.innerHTML = `
       <style>
        :host {
-          --ci-border-color: #734dc0;
+          --ci-border-color: #6139af;
           --ci-bg-color: #ffffff;
           --ci-radius: 4px;
           --ci-padding: 4px 12px;
-          --ci-error-border: #772121;
+          --ci-error: #d24343;
+          --ci-font-size: 16px;
+          --ci-line-height: 1.5;
+          --ci-placeholder-color: #999;
         }
         
-       .custom-input {
-           border: 2px dashed var(--ci-border-color);
-           border-radius: var(--ci-radius);
-           padding: var(--ci-padding);
+        .container {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+      
+        .custom-input {
+          border: 1px solid var(--ci-border-color);
+          border-radius: var(--ci-radius);
+          padding: var(--ci-padding);
+          background-color: var(--ci-bg-color);
+          font-size: var(--ci-font-size);
+          line-height: var(--ci-line-height);
+          outline: none;
+        }
+      
+        .custom-input.error {
+          border: 1px solid var(--ci-error);
+        }
+        
+        .custom-input.placeholder {
+          color: var(--ci-placeholder-color);
+        }
+        
+        .custom-input.password {
+          -webkit-text-security: disc;
+          text-security: disc;
+          font-family: text-security-disc;
+        }
+        
+         .custom-input.password.placeholder {
+          -webkit-text-security: none; /* 移除遮罩 */
+          text-security: none;
+          font-family: inherit;        /* 回到正常字型 */
+          color: var(--ci-placeholder-color);
+        }
+        
+        .error-msg {
+          color: var(--ci-error);
+          font-size: calc(var(--ci-font-size) - 2px);
+          padding: 0 4px;
         }
       </style>
-      <!--  使用 contenteditable 來做一個假的 input   -->
-      <div class="custom-input" contenteditable="true"></div>
+
+      <div class="container" part="container">
+        <!--  使用 contenteditable 來做一個假的 input   -->
+        <div class="custom-input" contenteditable="true" part="custom-input"></div>
+        <span class="error-msg" part="error-msg"></span>
+      </div>
     `
 
     return template.content;
@@ -150,17 +286,22 @@ export default class CustomInput extends HTMLElement {
 
   // 初始化欄位的值
   private initInputValue() {
-    if (!this.input) {
-      return;
-    }
-
     if (this.defaultValue) {
       this.value = this.defaultValue;
-      this.input.innerText = this.value;
+      this.input!.innerText = this.value;
       this.internals.setFormValue(this.value); // 記得呼叫，不然無法寫入 formData
     } else {
-      this.input.innerText = this.placeholder;
-      this.input.classList.add('placeholder');
+      this.input!.innerText = this.placeholder;
+      this.input!.classList.add('placeholder');
+    }
+  }
+
+  // 設定密碼樣式
+  private setPasswordStyle() {
+    if (this.inputType === 'password') {
+      this.input!.classList.add('password');
+    } else {
+      this.input!.classList.remove('password');
     }
   }
 
@@ -196,6 +337,15 @@ export default class CustomInput extends HTMLElement {
       this.input!.innerText = '';
       this.input!.classList.remove('placeholder');
     }
+
+    this.dirty = true; // 一旦 focus 就是為使用者已經開始跟元件互動
+
+    // 發送 focus 事件給外部
+    this.dispatchEvent(new CustomEvent('input-focus', {
+      detail: { value: this.value },
+      bubbles: true,
+      composed: true
+    }));
   }
 
   private handleBlurEvent() {
@@ -204,6 +354,13 @@ export default class CustomInput extends HTMLElement {
       this.input!.innerText = this.placeholder;
       this.input!.classList.add('placeholder');
     }
+
+    // 發送 blur 事件給外部
+    this.dispatchEvent(new CustomEvent('input-blur', {
+      detail: { value: this.value },
+      bubbles: true,
+      composed: true
+    }));
   }
 
   private handleKeydownEvent(e: KeyboardEvent) {
@@ -222,6 +379,8 @@ export default class CustomInput extends HTMLElement {
         this.input!
       );
 
+      this.input!.classList.add('error');
+      this.updateErrorDisplay();
       return false;
     }
 
@@ -233,6 +392,8 @@ export default class CustomInput extends HTMLElement {
         this.input!
       );
 
+      this.input!.classList.add('error');
+      this.updateErrorDisplay();
       return false;
     }
 
@@ -244,11 +405,37 @@ export default class CustomInput extends HTMLElement {
         this.input!
       );
 
+      this.input!.classList.add('error');
+      this.updateErrorDisplay();
+      return false;
+    }
+
+    // pattern 格式檢查
+    if (this.customPattern && this.value && !this.customPattern.test(this.value)) {
+      this.internals.setValidity(
+        { patternMismatch: true },
+        this.patternMessage,
+        this.input!
+      );
+
+      this.input!.classList.add('error');
+      this.updateErrorDisplay();
       return false;
     }
 
     // 通過驗證
     this.internals.setValidity({});
+    this.input!.classList.remove('error');
+    this.updateErrorDisplay();
     return true;
+  }
+
+  // 更新錯誤訊息顯示
+  private updateErrorDisplay() {
+    const errorMsg = this.shadowRoot!.querySelector('.error-msg');
+
+    if (errorMsg) {
+      errorMsg.textContent = this.internals.validationMessage || '';
+    }
   }
 }
