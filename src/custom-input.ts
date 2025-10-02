@@ -170,6 +170,15 @@ export default class CustomInput extends HTMLElement {
 
   // public method: 提供外部設定自訂錯誤訊息
   public setCustomError(msg: string) {
+    if (!msg) {
+      // 清除錯誤
+      this.internals.setValidity({});
+      this.input!.classList.remove('error');
+      this.updateErrorDisplay();
+      return; // 一定要 return
+    }
+
+    // 設定自訂錯誤
     this.internals.setValidity(
       { customError: true },
       msg,
