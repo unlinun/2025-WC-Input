@@ -1,6 +1,6 @@
 {
   "name": "un-custom-input",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "a custom input by un",
   "main": "dist/custom-input.umd.js",
   "module": "dist/custom-input.mjs",
