@@ -10,6 +10,9 @@ export default class CustomInput extends HTMLElement {
   static get observedAttributes() {
     return [
       'value',
+      'placeholder',
+      'allowMulti',
+      'inputType',
       'disabled',
       'required',
       'max-length',
@@ -19,6 +22,7 @@ export default class CustomInput extends HTMLElement {
       'pattern-message' // 不符合 regex 時的錯誤訊息
     ];
   }
+
 
   private readonly internals!: ElementInternals;
   private readonly input: HTMLDivElement | null = null;
@@ -85,6 +89,19 @@ export default class CustomInput extends HTMLElement {
 
     if (name === 'value') {
       this.value = newValue; // 透過 setter 同步
+    }
+
+
+    if (name === 'placeholder') {
+      this.placeholder = newValue;
+    }
+
+    if (name === 'allowMulti') {
+      this.allowMulti = !!newValue;
+    }
+
+    if (name === 'inputType') {
+      this.inputType = (newValue as 'text' | 'password') || 'text';
     }
 
     if (name === 'disabled') {
