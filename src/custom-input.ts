@@ -49,24 +49,6 @@ export default class CustomInput extends HTMLElement {
   }
 
   connectedCallback() {
-    // 使用 getAttribute 取得預設值
-    this.defaultValue = this.getAttribute('value') || '';
-    this.placeholder = this.getAttribute('placeholder') || '請輸入文字...';
-    this.allowMulti = this.getAttribute('multiline') ? !!this.getAttribute('multiline') : false;
-    this.inputType = (this.getAttribute('type') as 'text' | 'password') || 'text';
-    this.patternMessage = this.getAttribute('pattern-message') || '格式不符合要求';
-
-    // 可以接受自定義的 regex
-    const pattern = this.getAttribute('pattern');
-
-    if (pattern) {
-      try {
-        this.customPattern = new RegExp(pattern);
-      } catch (e) {
-        this.customPattern = null;
-      }
-    }
-
     if (!this.input) {
       return;
     }
@@ -90,7 +72,6 @@ export default class CustomInput extends HTMLElement {
     if (name === 'value') {
       this.value = newValue; // 透過 setter 同步
     }
-
 
     if (name === 'placeholder') {
       this.placeholder = newValue;
