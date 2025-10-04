@@ -3,7 +3,7 @@
   "version": "1.0.2",
   "description": "a custom input by un",
   "main": "dist/custom-input.umd.js",
-  "module": "dist/custom-input.es.js",
+  "module": "dist/custom-input.mjs",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
