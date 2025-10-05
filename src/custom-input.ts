@@ -323,7 +323,7 @@ export default class CustomInput extends HTMLElement {
 
   private handleInputEvent(e: Event) {
     // 利用表單方法 `setFormValue` 寫入欄位的值，將值同步到 form internals
-    const value = (e.target as HTMLElement).innerText.trim() || '';
+    const value = (e.target as HTMLElement).textContent.trim() || '';
     this.value = value;
     this.internals.setFormValue(value);
 
@@ -416,6 +416,8 @@ export default class CustomInput extends HTMLElement {
       this.updateErrorDisplay();
       return false;
     }
+
+    console.log(this.value)
 
     // pattern 格式檢查
     if (this.customPattern && this.value && !this.customPattern.test(this.value)) {
